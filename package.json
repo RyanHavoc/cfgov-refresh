@@ -21,8 +21,8 @@
     }
   },
   "dependencies": {
-    "@babel/core": "7.3.3",
-    "@babel/preset-env": "7.3.1",
+    "@babel/core": "7.3.4",
+    "@babel/preset-env": "7.3.4",
     "autoprefixer": "8.6.5",
     "babel-loader": "8.0.5",
     "cf-atomic-component": "2.1.2",
@@ -91,7 +91,7 @@
     "psi": "3.1.0",
     "sauce-connect-tunnel": "0.2.1",
     "selenium-webdriver": "4.0.0-alpha.1",
-    "snyk": "1.134.2",
+    "snyk": "1.135.1",
     "through2": "3.0.0",
     "wcag": "0.3.0"
   },
