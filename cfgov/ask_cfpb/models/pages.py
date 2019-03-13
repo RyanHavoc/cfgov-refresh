@@ -13,10 +13,11 @@ from django.utils.text import Truncator
 
 from wagtail.contrib.wagtailroutablepage.models import RoutablePageMixin, route
 from wagtail.wagtailadmin.edit_handlers import (
-    FieldPanel, MultiFieldPanel, ObjectList, StreamFieldPanel, TabbedInterface
+    FieldPanel, InlinePanel, MultiFieldPanel, ObjectList,
+    StreamFieldPanel, TabbedInterface
 )
 from wagtail.wagtailcore.fields import RichTextField, StreamField
-from wagtail.wagtailcore.models import Page
+from wagtail.wagtailcore.models import Orderable, Page
 from wagtail.wagtailsearch import index
 from wagtail.wagtailsnippets.edit_handlers import SnippetChooserPanel
 
@@ -195,6 +196,15 @@ def validate_page_number(request, paginator):
     return page_number
 
 
+class PortalTopicOrderable(Orderable):
+    page = ParentalKey(CFGOVPage, related_name='portal_topics')
+    topic = models.ForeignKey('v1.PortalTopic', related_name='+')
+
+    panels = [
+        FieldPanel('topic'),
+    ]
+
+
 class AnswerLandingPage(LandingPage):
     """
     Page type for Ask CFPB's landing page.
@@ -284,6 +294,7 @@ class AnswerCategoryPage(RoutablePageMixin, SecondaryNavigationJSMixin,
         answers = self.ask_category.answerpage_set.filter(
             language=self.language, redirect_to=None, live=True).values(
                 'answer_id', 'question', 'slug', 'answer')
+        # pages = AnswerPage.objects.filter(portal_topics__topic__heading='Auto loans')
         if self.language == 'es':
             for a in answers:
                 a['answer'] = Truncator(a['answer']).words(
@@ -573,19 +584,6 @@ class AnswerPage(CFGOVPage):
         related_name='related_question',
         help_text='Maximum of 3 related questions')
     answer_id = models.IntegerField(default=0)
-    portal_topic = ParentalManyToManyField(
-        PortalTopic,
-        blank=True,
-        help_text='Limit to 1 portal topic if possible')
-    primary_portal_topic = ParentalKey(
-        PortalTopic,
-        blank=True,
-        null=True,
-        on_delete=models.SET_NULL,
-        related_name='primary_portal_topic',
-        help_text=(
-            "Use only if assigning more than one portal topic, "
-            "to control which topic is used as a breadcrumb."))
     portal_see_all = ParentalManyToManyField(
         PortalSeeAll,
         blank=True)
@@ -609,10 +607,12 @@ class AnswerPage(CFGOVPage):
                 'related_questions',
                 page_type='ask_cfpb.AnswerPage',
                 is_single=False),
-            FieldPanel('primary_portal_topic'),
-            FieldPanel('portal_topic', widget=forms.CheckboxSelectMultiple),
             FieldPanel('portal_see_all', widget=forms.CheckboxSelectMultiple)],
             heading="Metadata",
+            classname="collapsible"),
+        MultiFieldPanel([
+            InlinePanel('portal_topics', label="Portal topics", max_num=2)],
+            heading="Portal topics",
             classname="collapsible"),
         AutocompletePanel('redirect_to_page', page_type='ask_cfpb.AnswerPage'),
         StreamFieldPanel('user_feedback'),
@@ -647,6 +647,9 @@ class AnswerPage(CFGOVPage):
     def get_context(self, request, *args, **kwargs):
         context = super(AnswerPage, self).get_context(request)
         context['related_questions'] = self.related_questions.all()
+        context['portal_topic'] = self.portal_topics.first()
+        
+        
         context['description'] = self.snippet if self.snippet \
             else Truncator(self.answer).words(40, truncate=' ...')
         if self.language == 'es':
