@@ -1,1 +1,1 @@
-../../requirements/django.txt
+../../requirements/requirements.txt
